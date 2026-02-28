@@ -1,0 +1,301 @@
+people:
+  # Nineteenth Century / Early Twentieth Century
+  - id: kurtz_f
+    name: Federico Kurtz
+    institution: Academia Nacional de Ciencias (Córdoba)
+    role: Pionero / Mentor
+    notes: "Botánico de la Academia. Autor del Atlas de Plantas Fósiles."
+
+  - id: frenguelli_j
+    name: Joaquín Frenguelli
+    institution: Museo de La Plata
+    role: Pionero
+    notes: "No formó escuela directa según el texto, pero dejó gran colección."
+
+  - id: feruglio_e
+    name: Egidio Feruglio
+    institution: YPF
+    role: Pionero
+    notes: "No formó escuela directa."
+
+  # First Generation (Castellanos School)
+  - id: castellanos_a
+    name: Alberto Castellanos
+    institution: UBA
+    directors: [kurtz_f]
+    role: Formador de la primera generación
+    notes: "Discípulo de Kurtz. Impulsó la Paleobotánica en la UBA."
+
+  # Second Generation (Founders)
+  - id: stipanicic_p
+    name: Pedro N. Stipanicic
+    institution: UBA / CONICET
+    directors: [castellanos_a]
+    notes: "Tesis 1946. Primer discípulo de Castellanos."
+
+  - id: menendez_c
+    name: Carlos A. Menéndez
+    institution: UBA / MACN
+    directors: [castellanos_a]
+    notes: "Tesis 1948. Creó la Div. Paleobotánica del MACN."
+
+  - id: bonetti_m
+    name: María Bonetti
+    institution: UBA
+    directors: [castellanos_a]
+    notes: "Tesis 1961."
+
+  - id: archangelsky_s
+    name: Sergio Archangelsky
+    institution: UBA / MACN / MLP
+    directors: [castellanos_a, stipanicic_p]
+    notes: "Tesis 1957. El gran formador (19 tesis dirigidas)."
+
+  - id: gamerro_j
+    name: Juan C. Gamerro
+    institution: UBA / MLP
+    role: Pionero Palinología
+    notes: "Impulsó la paleopalinología."
+
+  - id: volkheimer_w
+    name: Wolfgang Volkheimer
+    institution: IANIGLA / MACN
+    role: Investigador / Formador
+    notes: "Mencionado como formador importante. Dirigió numerosas tesis."
+
+  # Third Generation (The Expansion)
+  - id: amos_a
+    name: Arturo Jorge Amos
+    institution: UBA
+    role: Mentor Externo
+    notes: "Geólogo. Director de tesis de R. Cúneo."
+
+  - id: cuneo_r
+    name: Rubén Cúneo
+    institution: MEF
+    directors: [archangelsky_s, amos_a]
+    role: Investigador Formador
+    notes: "Director del MEF. Tesis 1987 (UBA)."
+
+  - id: herbst_r
+    name: Rafael Herbst
+    institution: UNT / CECOAL
+    directors: [archangelsky_s]
+    role: Investigador Formador
+    notes: "Tesis 1963 (UNT). Primer tesista de Archangelsky. Fundador Paleobotánica UNNE."
+
+  - id: azcuy_cl
+    name: Carlos L. Azcuy
+    institution: UBA
+    directors: [menendez_c]
+    role: Investigador Formador
+    notes: "Tesis 1974. Director: Carlos Menéndez."
+  
+  - id: romero_e
+    name: Edgardo Romero
+    institution: UNLP / MACN
+    directors: [archangelsky_s]
+    role: Investigador
+    notes: "Tesis dirigida por Archangelsky (UNLP)."
+
+  - id: del_fueyo_g
+    name: Georgina del Fueyo
+    institution: MACN
+    directors: [archangelsky_s]
+    role: Investigador
+    notes: "Tesis dirigida por S. Archangelsky (1986-1992)."
+
+  - id: barreda_v
+    name: Viviana Barreda
+    institution: MACN
+    directors: [archangelsky_s]
+    role: Investigador
+    notes: "Vinculada a la escuela de Archangelsky."
+
+  - id: de_la_sota_er
+    name: Elías R. De la Sota
+    role: Investigador
+    notes: "Inició entre 1957-1968"
+
+  - id: pottie_de_baldis_d
+    name: D. Pöthe de Baldis
+    role: Investigador
+    notes: "Inició entre 1957-1968"
+  
+  # Artabe / Morel Group (UNLP - Likely Archangelsky/Romero lineage)
+  - id: artabe_a
+    name: Analía Artabe
+    institution: UNLP / MLP
+    role: Investigador Formador
+    notes: "Directora de tesis de Bodnar y Brea. Probable vínculo con Archangelsky/Romero."
+
+  - id: morel_e
+    name: Eduardo Morel
+    institution: UNLP / MLP
+    role: Investigador
+    notes: "Co-director de Bodnar. Jefe división paleobotánica MLP."
+
+  # Volkheimer School / Collaborators
+  - id: quattrocchio_m
+    name: Mirta Quattrocchio
+    institution: UNS (Bahía Blanca)
+    directors: [volkheimer_w]
+    role: Investigador Formador
+    notes: "Tesis 1977. Director de 15 tesis."
+
+  - id: pramparo_m
+    name: Mercedes Prámparo
+    institution: CRICYT / IANIGLA
+    directors: [volkheimer_w]
+    role: Investigador Formador
+    notes: "Discípula de Volkheimer."
+
+  - id: martinez_m
+    name: Marcelo Martínez
+    institution: UNS / INGEOSUR
+    directors: [volkheimer_w]
+    role: Investigador
+    notes: "Escuela de Volkheimer."
+
+  # Ottone Group
+  - id: ottone_e
+    name: Eduardo Ottone
+    institution: UBA
+    role: Investigador Formador
+    notes: "Doctorado UBA 1988."
+
+  # Fourth Generation
+  - id: escapa_i
+    name: Ignacio Escapa
+    institution: MEF
+    directors: [cuneo_r]
+    role: Investigador Formador
+    notes: "Usuario del sistema."
+
+  # Fourth Generation (Artabe Students)
+  - id: bodnar_j
+    name: Josefina Bodnar
+    institution: MLP / UNLP
+    directors: [artabe_a, morel_e]
+    role: Investigador
+    notes: "Tesis 2010 (LP). Especialista Triásico."
+
+  - id: brea_m
+    name: Mariana Brea
+    institution: CICYTTP (Diamante)
+    directors: [artabe_a] # Co-director Spalletti
+    role: Investigador Formador
+    notes: "Tesis 1995 (LP). Maderas fósiles."
+
+  # Fourth Generation (Azcuy Students)
+  - id: gutierrez_p
+    name: Pedro Gutiérrez
+    institution: MACN
+    directors: [azcuy_cl]
+    role: Investigador
+    notes: "Tesis 1988 (UBA)."
+
+  - id: di_pasquo_m
+    name: Mercedes Di Pasquo
+    institution: CICYTTP / UNNE
+    directors: [azcuy_cl]
+    role: Investigador Formador
+    notes: "Tesis 1999 (UBA)."
+
+  # Fourth Generation (Herbst School - Gnaedinger & Crisafulli)
+  - id: crisafulli_a
+    name: Alexandra Crisafulli
+    institution: UNNE (Corrientes)
+    directors: [herbst_r]
+    role: Investigador
+    notes: "Escuela del NE (UNNE)."
+
+  - id: gnaedinger_s
+    name: Silvia Gnaedinger
+    institution: CECOAL / UNNE
+    directors: [herbst_r] # Likely link based on context/user
+    role: Investigador Formador
+    notes: "Doctorado UNNE. Formadora en CECOAL."
+
+  # Fourth Generation (Ottone Students)
+  - id: pedernera_t
+    name: Tomás Pedernera
+    institution: IANIGLA
+    directors: [ottone_e]
+    role: Investigador
+
+  # Fifth Generation (Escapa Students)
+  - id: elgorriaga_a
+    name: Andrés Elgorriaga
+    institution: MEF
+    directors: [escapa_i]
+    role: Investigador / Becario
+
+  - id: nunes_c
+    name: C. Nunes
+    institution: MEF
+    directors: [escapa_i]
+    role: Investigador / Becario
+
+  - id: andruchow_c
+    name: C. Andruchow
+    institution: MEF
+    directors: [escapa_i]
+    role: Investigador / Becario
+
+  # Fifth Generation (Di Pasquo/Herbst/Others)
+  - id: fernandez_pacella_l
+    name: Lionel Fernández Pacella
+    institution: UNNE / CECOAL
+    directors: [di_pasquo_m, crisafulli_a]
+    role: Investigador
+
+  # Fifth Generation (Gnaedinger Students)
+  - id: gomez_g
+    name: Graciela Noemí Gómez
+    institution: CECOAL
+    directors: [gnaedinger_s]
+    role: Investigador
+  
+  - id: villa_r
+    name: Rodrigo Villa Lelis Ribeiro
+    institution: CECOAL
+    directors: [gnaedinger_s]
+    role: Investigador
+
+  # Fifth Generation (Brea Students)
+  - id: moya_e
+    name: Eliana Moya
+    institution: CICYTTP
+    directors: [brea_m]
+    role: Investigador
+
+  - id: robledo_j
+    name: Juan Manuel Robledo
+    institution: CICYTTP
+    directors: [brea_m]
+    role: Investigador
+
+  # Fifth Generation (Prámparo Students)
+  - id: asurmendi_e
+    name: Estefania Asurmendi
+    institution: IANIGLA
+    directors: [pramparo_m]
+    role: Investigador
+
+  - id: mego_n
+    name: Natalia Mego
+    institution: IANIGLA
+    directors: [pramparo_m]
+    role: Investigador
+
+  # Fifth Generation (Quattrocchio Students - Partial List)
+  - id: hinojosa_f
+    name: Felipe Hinojosa
+    directors: [quattrocchio_m]
+    role: Investigador
+
+  - id: gaxiola_a
+    name: Aurora Gaxiola
+    directors: [quattrocchio_m]
+    role: Investigador

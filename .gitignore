@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+backups/
+.DS_Store
+*.db-journal
+*.db-shm
+*.db-wal
+.ipynb_checkpoints/
+.gemini/
+.agents/
+.agent/
+_agents/
+_agent/
+brain/
+*.log
+nohup.out
