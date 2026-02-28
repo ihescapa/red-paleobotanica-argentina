@@ -4,3 +4,4 @@ sqlalchemy
 plotly
 pyvis
 networkx
+bcrypt
