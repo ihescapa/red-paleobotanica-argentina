@@ -882,239 +882,122 @@ def main_app():
         st.title("Análisis de Red, Género y Región")
         st.markdown("---")
         
-        tab1, tab2 = st.tabs(["🌎 Geografía y Género", "🔬 Métricas de Comunidad (Avanzado)"])
-
-        with tab1:
-            st.subheader("📍 Distribución Regional")
-            st.info("📊 Visibilidad de investigadores por provincias (vincualdos a la institución declarada).")
+        # Simplified view without advanced metrics/flows
+        st.subheader("📍 Distribución Regional")
+        st.info("📊 Visibilidad de investigadores por provincias (vincualdos a la institución declarada).")
+        
+        prov_counts = []
+        for r in researchers:
+            if r.province:
+                prov_counts.append({'Provincia': r.province, 'Nombre': r.name})
+        
+        if prov_counts:
+            df_prov = pd.DataFrame(prov_counts)
+            # Group by province and aggregate: count total and join names
+            summary_prov = df_prov.groupby('Provincia').agg(
+                Total=('Nombre', 'count'),
+                Nombres=('Nombre', lambda x: ", ".join(sorted(list(x))))
+            ).reset_index().sort_values('Total', ascending=False)
             
-            prov_counts = []
-            for r in researchers:
-                if r.province:
-                    prov_counts.append({'Provincia': r.province, 'Nombre': r.name})
+            # Formatting researcher names for better display in tooltips (wrap text if too long)
+            def format_names(names_str):
+                import textwrap
+                wrapped = textwrap.fill(names_str, width=50)
+                return wrapped.replace('\n', '<br>')
             
-            if prov_counts:
-                df_prov = pd.DataFrame(prov_counts)
-                # Group by province and aggregate: count total and join names
-                summary_prov = df_prov.groupby('Provincia').agg(
-                    Total=('Nombre', 'count'),
-                    Nombres=('Nombre', lambda x: ", ".join(sorted(list(x))))
-                ).reset_index().sort_values('Total', ascending=False)
-                
-                # Formatting researcher names for better display in tooltips (wrap text if too long)
-                def format_names(names_str):
-                    import textwrap
-                    wrapped = textwrap.fill(names_str, width=50)
-                    return wrapped.replace('\n', '<br>')
-                
-                summary_prov['Nombres_HTML'] = summary_prov['Nombres'].apply(format_names)
-                
-                col_m1, col_m2 = st.columns(2)
-                with col_m1:
-                    # 1. Argentina Map (using local GeoJSON)
-                    try:
-                        with open("assets/geojson/argentina.geojson", "r") as f:
-                            arg_geojson = json.load(f)
-                        
-                        # Ensure province names match GeoJSON (normalized comparison)
-                        fig_map = px.choropleth(summary_prov, 
-                                                geojson=arg_geojson, 
-                                                locations='Provincia', 
-                                                featureidkey="properties.NAME_1",
-                                                color='Total',
-                                                hover_name='Provincia',
-                                                hover_data={
-                                                    'Total': True,
-                                                    'Provincia': False,
-                                                    'Nombres_HTML': True
-                                                },
-                                                color_continuous_scale="Blues",
-                                                labels={'Total':'Investigadores/as', 'Nombres_HTML': 'Integrantes'},
-                                                title="Mapa de Distribución (Argentina)")
-                        
-                        fig_map.update_geos(fitbounds="locations", visible=False)
-                        fig_map.update_layout(margin={"r":0,"t":40,"l":0,"b":0})
-                        st.plotly_chart(fig_map, use_container_width=True)
-                    except Exception as e:
-                        st.error(f"Error cargando mapa: {e}")
-                        fig_prov = px.bar(summary_prov, x='Provincia', y='Total', text='Total',
-                                         title="Investigadores/as por Provincia",
-                                         hover_data=['Nombres_HTML'],
-                                         color_discrete_sequence=['#2E5C8A'])
-                        st.plotly_chart(fig_prov, use_container_width=True)
-                        
-                with col_m2:
-                    fig_active = px.pie(summary_prov, names='Provincia', values='Total',
-                                       title="Distribución Total por Provincia",
-                                       hover_data=['Nombres_HTML'],
-                                       labels={'Nombres_HTML': 'Integrantes'},
-                                       hole=0.4, color_discrete_sequence=px.colors.qualitative.Safe)
-                    st.plotly_chart(fig_active, use_container_width=True)
-                
-                st.caption("ℹ️ La distribución se basa en la institución declarada para cada investigador/a.")
-            else:
-                st.warning("No hay datos geográficos cargados aún.")
-
-            st.markdown("---")
-            # Existing Gender Analysis...
-            st.write("Métricas y distribución de investigadores en la red genealógica.")
+            summary_prov['Nombres_HTML'] = summary_prov['Nombres'].apply(format_names)
             
-            # Calculate statistics
-            m_count = len([r for r in researchers if r.gender == "Masculino"])
-            f_count = len([r for r in researchers if r.gender == "Femenino"])
-            u_count = len([r for r in researchers if r.gender == "Desconocido"])
-            total_count = len(researchers)
-            
-            # 1. Gender Distribution Pie Chart
-            st.subheader("Distribución de Género General")
-            labels = ['Femenino', 'Masculino', 'Desconocido']
-            values = [f_count, m_count, u_count]
-            colors = ['#FF6B6B', '#4ECDC4', '#C7F464']
-            
-            fig = px.pie(names=labels, values=values, color_discrete_sequence=colors, hole=0.4)
-            fig.update_layout(margin=dict(t=20, b=20, l=20, r=20), height=350)
-            st.plotly_chart(fig, use_container_width=True)
-
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("Total Investigadores/as", total_count)
-                st.metric("Mujeres", f_count)
-            with col2:
-                st.metric("Relaciones (Aristas)", len(relationships))
-                st.metric("Hombres", m_count)
-                
-            st.markdown("---")
-            
-            # 2. Career Start per Decade by Gender
-            st.subheader("Primeras Publicaciones por Década y Género")
-            decades = []
-            for r in researchers:
-                if r.activity_start:
-                    # Group by decade
-                    decade = (r.activity_start // 10) * 10
-                    decades.append({'Década': decade, 'Género': r.gender})
-            
-            if decades:
-                df = pd.DataFrame(decades)
-                df_grouped = df.groupby(['Década', 'Género']).size().reset_index(name='Cantidad')
-                fig_bar = px.bar(df_grouped, x='Década', y='Cantidad', color='Género', barmode='group',
-                                 color_discrete_map={'Femenino': '#FF6B6B', 'Masculino': '#4ECDC4', 'Desconocido': '#C7F464'})
-                st.plotly_chart(fig_bar, use_container_width=True)
-                
-            st.markdown("---")
-            
-            # 3. Flujo de Formación por Género (Assortativity)
-            st.subheader("Flujo de Mentorazgo por Género")
-            st.write("¿Quién dirige a quién? Relaciones director/a -> dirigido/a.")
-            flow_data = []
-            r_dict = {r.id: r for r in researchers}
-            for rel in relationships:
-                if rel.type == "Secondary":
-                    continue # Consider only primary directives
-                dir_r = r_dict.get(rel.director_id)
-                stu_r = r_dict.get(rel.student_id)
-                if dir_r and stu_r and dir_r.gender != 'Desconocido' and stu_r.gender != 'Desconocido':
-                    flow_data.append({'Director/a': dir_r.gender, 'Dirigido/a': stu_r.gender})
-            
-            if flow_data:
-                df_flow = pd.DataFrame(flow_data)
-                flow_counts = df_flow.groupby(['Director/a', 'Dirigido/a']).size().reset_index(name='Cantidad')
-                
-                # Density Heatmap
-                fig_heat = px.density_heatmap(flow_counts, x='Dirigido/a', y='Director/a', z='Cantidad', 
-                                              text_auto=True, color_continuous_scale='Tealgrn')
-                fig_heat.update_layout(height=400, margin=dict(t=20, b=20, l=20, r=20))
-                st.plotly_chart(fig_heat, use_container_width=True)
-
-        with tab2:
-            st.subheader("🚀 Métricas de Flujo y Temáticas")
-            st.info("Estas métricas avanzadas analizan la evolución de la comunidad en términos de transferencia de conocimiento y movilidad.")
-
-            # 1. Thematic Clusters (based on keywords)
-            st.markdown("#### 🏷️ Paisaje Temático de la Red")
-            all_keywords = []
-            for r in researchers:
-                if r.keywords:
-                    # Clean and append keywords
-                    kw_list = [k.strip().capitalize() for k in r.keywords.split(",")]
-                    all_keywords.extend(kw_list)
-            
-            if all_keywords:
-                kw_df = pd.DataFrame(all_keywords, columns=['Palabra Clave'])
-                kw_counts = kw_df['Palabra Clave'].value_counts().reset_index()
-                kw_counts.columns = ['Tema', 'Frecuencia']
-                
-                fig_kw = px.bar(kw_counts.head(20), x='Frecuencia', y='Tema', orientation='h',
-                               title="Top 20 Temas de Investigación en la Red",
-                               color='Frecuencia', color_continuous_scale='Viridis')
-                fig_kw.update_layout(yaxis={'categoryorder':'total ascending'})
-                st.plotly_chart(fig_kw, use_container_width=True)
-            else:
-                st.write("No hay palabras clave suficientes para generar un perfil temático.")
-
-            st.markdown("---")
-            
-            # 2. Academic Mobility Index
-            st.markdown("#### 🛫 Índice de Movilidad Académica")
-            st.write("Mide el porcentaje de discípulos/as que desarrollaron su carrera en una institución distinta a la de su director/a.")
-            
-            r_dict = {r.id: r for r in researchers}
-            mobility_events = []
-            for rel in relationships:
-                if rel.type == "Secondary": continue
-                dir_r = r_dict.get(rel.director_id)
-                stu_r = r_dict.get(rel.student_id)
-                if dir_r and stu_r and dir_r.institution and stu_r.institution:
-                    # Basic check: do they share the same institution string?
-                    # Note: this is a bit sensitive to string variations
-                    moved = dir_r.institution.strip().lower() != stu_r.institution.strip().lower()
-                    mobility_events.append({'Movilidad': "Cambio de Institución" if moved else "Misma Institución"})
-            
-            if mobility_events:
-                df_mob = pd.DataFrame(mobility_events)
-                mob_stats = df_mob['Movilidad'].value_counts().reset_index()
-                
-                fig_mob = px.pie(mob_stats, names='Movilidad', values='count', 
-                                title="Independencia e Intercambio Institucional",
-                                color='Movilidad', color_discrete_map={"Cambio de Institución": "#4ECDC4", "Misma Institución": "#FF6B6B"},
-                                hole=0.5)
-                st.plotly_chart(fig_mob, use_container_width=True)
-                
-                mob_rate = (len(df_mob[df_mob['Movilidad'] == "Cambio de Institución"]) / len(df_mob)) * 100
-                st.metric("Tasa de Movilidad Inter-Institucional", f"{mob_rate:.1f}%")
-            else:
-                st.write("Datos insuficientes para calcular la movilidad.")
-
-            st.markdown("---")
-
-            # 3. Territorial Legacy (Reach)
-            st.markdown("#### 🗺️ Alcance del Legado (Legado Territorial)")
-            st.write("Cantidad de provincias distintas donde un formador/a ha 'sembrado' discípulos/as.")
-            
-            legacy_data = []
-            for r in researchers:
-                # Get students for this researcher
-                students_ids = [rel.student_id for rel in relationships if rel.director_id == r.id and rel.type == "Primary"]
-                if students_ids:
-                    provinces = set()
-                    for s_id in students_ids:
-                        stu_r = r_dict.get(s_id)
-                        if stu_r and stu_r.province:
-                            provinces.add(stu_r.province)
+            col_m1, col_m2 = st.columns(2)
+            with col_m1:
+                # 1. Argentina Map (using local GeoJSON)
+                try:
+                    with open("assets/geojson/argentina.geojson", "r") as f:
+                        arg_geojson = json.load(f)
                     
-                    if provinces:
-                        legacy_data.append({'Nombre': r.name, 'Alcance (Provincias)': len(provinces), 'Cant. Dirigidos': len(students_ids)})
+                    # Ensure province names match GeoJSON (normalized comparison)
+                    fig_map = px.choropleth(summary_prov, 
+                                            geojson=arg_geojson, 
+                                            locations='Provincia', 
+                                            featureidkey="properties.NAME_1",
+                                            color='Total',
+                                            hover_name='Provincia',
+                                            hover_data={
+                                                'Total': True,
+                                                'Provincia': False,
+                                                'Nombres_HTML': True
+                                            },
+                                            color_continuous_scale="Blues",
+                                            labels={'Total':'Investigadores/as', 'Nombres_HTML': 'Integrantes'},
+                                            title="Mapa de Distribución (Argentina)")
+                    
+                    fig_map.update_geos(fitbounds="locations", visible=False)
+                    fig_map.update_layout(margin={"r":0,"t":40,"l":0,"b":0})
+                    st.plotly_chart(fig_map, use_container_width=True)
+                except Exception as e:
+                    st.error(f"Error cargando mapa: {e}")
+                    fig_prov = px.bar(summary_prov, x='Provincia', y='Total', text='Total',
+                                     title="Investigadores/as por Provincia",
+                                     hover_data=['Nombres_HTML'],
+                                     color_discrete_sequence=['#2E5C8A'])
+                    st.plotly_chart(fig_prov, use_container_width=True)
+                    
+            with col_m2:
+                fig_active = px.pie(summary_prov, names='Provincia', values='Total',
+                                   title="Distribución Total por Provincia",
+                                   hover_data=['Nombres_HTML'],
+                                   labels={'Nombres_HTML': 'Integrantes'},
+                                   hole=0.4, color_discrete_sequence=px.colors.qualitative.Safe)
+                st.plotly_chart(fig_active, use_container_width=True)
             
-            if legacy_data:
-                df_legacy = pd.DataFrame(legacy_data).sort_values('Alcance (Provincias)', ascending=False)
-                fig_leg = px.scatter(df_legacy.head(15), x='Cant. Dirigidos', y='Alcance (Provincias)', 
-                                    text='Nombre', size='Alcance (Provincias)', color='Alcance (Provincias)',
-                                    title="Top 15 Formadores/as por Diversidad Geográfica de su Legado",
-                                    labels={'Cant. Dirigidos': 'Cantidad de Dirigidos/as (Total)'})
-                fig_leg.update_traces(textposition='top center')
-                st.plotly_chart(fig_leg, use_container_width=True)
-            else:
-                st.write("No hay datos de relaciones geográficas suficientes.")
+            st.caption("ℹ️ La distribución se basa en la institución declarada para cada investigador/a.")
+        else:
+            st.warning("No hay datos geográficos cargados aún.")
+
+        st.markdown("---")
+        # Existing Gender Analysis...
+        st.write("Métricas y distribución de investigadores en la red genealógica.")
+        
+        # Calculate statistics
+        m_count = len([r for r in researchers if r.gender == "Masculino"])
+        f_count = len([r for r in researchers if r.gender == "Femenino"])
+        u_count = len([r for r in researchers if r.gender == "Desconocido"])
+        total_count = len(researchers)
+        
+        # 1. Gender Distribution Pie Chart
+        st.subheader("Distribución de Género General")
+        labels = ['Femenino', 'Masculino', 'Desconocido']
+        values = [f_count, m_count, u_count]
+        colors = ['#FF6B6B', '#4ECDC4', '#C7F464']
+        
+        fig = px.pie(names=labels, values=values, color_discrete_sequence=colors, hole=0.4)
+        fig.update_layout(margin=dict(t=20, b=20, l=20, r=20), height=350)
+        st.plotly_chart(fig, use_container_width=True)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Total Investigadores/as", total_count)
+            st.metric("Mujeres", f_count)
+        with col2:
+            st.metric("Relaciones (Aristas)", len(relationships))
+            st.metric("Hombres", m_count)
+            
+        st.markdown("---")
+        
+        # 2. Career Start per Decade by Gender
+        st.subheader("Primeras Publicaciones por Década y Género")
+        decades = []
+        for r in researchers:
+            if r.activity_start:
+                # Group by decade
+                decade = (r.activity_start // 10) * 10
+                decades.append({'Década': decade, 'Género': r.gender})
+        
+        if decades:
+            df = pd.DataFrame(decades)
+            df_grouped = df.groupby(['Década', 'Género']).size().reset_index(name='Cantidad')
+            fig_bar = px.bar(df_grouped, x='Década', y='Cantidad', color='Género', barmode='group',
+                             color_discrete_map={'Femenino': '#FF6B6B', 'Masculino': '#4ECDC4', 'Desconocido': '#C7F464'})
+            st.plotly_chart(fig_bar, use_container_width=True)
 
 
 
