@@ -246,7 +246,9 @@ def apply_graph_settings(net, hierarchical=False):    # Configure visualization 
 
 def add_nodes_to_graph(net, researchers, ids_to_include=None, highlight_id=None, levels=None, theme_filters=None):
     for r in researchers:
-        if ids_to_include is not None and r.id not in ids_to_include:
+        # Ensure we don't skip the highlighted node even if it would be filtered out as isolated
+        is_highlighted = highlight_id and r.id == highlight_id
+        if ids_to_include is not None and r.id not in ids_to_include and not is_highlighted:
             continue
             
         # 1. Handle Theme Highlights (Pie Charts)
@@ -272,7 +274,7 @@ def add_nodes_to_graph(net, researchers, ids_to_include=None, highlight_id=None,
         elif r.is_phd_in_progress:
             color = "#FF7043" # Distinct Coraly/Orange for PhD in progress
             size = 18
-        elif highlight_id and r.id == highlight_id:
+        elif is_highlighted:
             color = "#FFD700"  # Bright gold for highlighted node
             size = 35
         else:
@@ -281,14 +283,16 @@ def add_nodes_to_graph(net, researchers, ids_to_include=None, highlight_id=None,
         
         font_color = "white"
         
-        # Activity Status
-        activity_status = ""
-        if r.is_phd_in_progress:
-            activity_status = " <span style='color:#FF5722; font-weight:bold;'>[DOCTORADO EN CURSO]</span>"
+        # Header Info
+        extra_status = ""
+        verification_status = ""
+        if r.verified:
+            verification_status = " <span style='color:#4CAF50; font-size:0.8em; font-weight:bold;'>[CORROBORADO]</span>"
         else:
-            current_year = datetime.now().year
-            if r.activity_end and r.activity_end >= (current_year - 5):
-                activity_status = " <span style='color:green; font-weight:bold;'>[ACTIVO]</span>"
+            verification_status = " <span style='color:#FFD700; font-size:0.8em; font-weight:bold;'>[DATO SIN CORROBORAR]</span>"
+            
+        if r.is_phd_in_progress:
+            extra_status = " <span style='color:#FF5722; font-weight:bold;'>[DOCTORADO EN CURSO]</span>"
             
         # Sanitize data for HTML/JS
         r_name_clean = r.name.replace("'", "&#39;")
@@ -299,7 +303,8 @@ def add_nodes_to_graph(net, researchers, ids_to_include=None, highlight_id=None,
         # 1. Header with Name and Status
         header_html = f"""
         <div style='background-color: {color}; color: {font_color}; padding: 12px; border-radius: 8px 8px 0 0; margin: -10px -10px 10px -10px;'>
-            <h3 style='margin: 0; font-size: 1.1em; font-weight: 700; line-height: 1.2;'>{r_name_clean}{activity_status}</h3>
+            <h3 style='margin: 0; font-size: 1.1em; font-weight: 700; line-height: 1.2;'>{r_name_clean}{extra_status}</h3>
+            <div style='margin-top: 4px;'>{verification_status}</div>
         </div>
         """
 
@@ -309,7 +314,7 @@ def add_nodes_to_graph(net, researchers, ids_to_include=None, highlight_id=None,
             <div style='margin-bottom: 4px;'><b>🏛️ Institución:</b> {r_inst_clean}</div>
             <div style='margin-bottom: 4px;'><b>📍 Ubicación:</b> {r.city or '?'}, {r.province or '?'}</div>
             <div style='margin-bottom: 4px;'><b>🎓 Rol:</b> {r_role_clean}</div>
-            <div style='margin-bottom: 4px;'><b>⏳ Actividad:</b> {r.activity_start or '?'}-{r.activity_end or '?'}</div>
+            <div style='margin-bottom: 4px;'><b>📚 Años de Publicación:</b> {r.activity_start or '?'}-{r.activity_end or '?'}</div>
         </div>
         """
 
@@ -772,7 +777,14 @@ def generate_hierarchical_html(researchers, relationships):
 
 # --- AUTH VIEW ---
 def auth_page():
-    st.markdown("<h1 style='text-align: center; margin-bottom: 40px; color: #2E5C8A;'>Red de Paleobotánica y Palinología Argentinas</h1>", unsafe_allow_html=True)
+    # Logo on Top for Login
+    logo_path = "assets/images/sapp_logo.jpg"
+    if os.path.exists(logo_path):
+        col_l1, col_l2, col_l3 = st.columns([2, 1, 2])
+        with col_l2:
+            st.image(logo_path, use_container_width=True)
+            
+    st.markdown("<h1 style='text-align: center; margin-bottom: 40px; color: #2E5C8A;'>Red de Paleobotánica y Palinología Argentina</h1>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         tab_login, tab_reigster = st.tabs(["Ingresar", "Registrarse"])
@@ -801,7 +813,13 @@ def main_app():
     user = st.session_state.user
     
     # Sidebar Header
-    st.sidebar.markdown(f"### Red de Paleobotánica<br><span style='font-size: 0.8em; color: gray;'>y Palinología Argentinas</span>", unsafe_allow_html=True)
+    logo_path = "assets/images/sapp_logo.jpg"
+    if os.path.exists(logo_path):
+        col_logo_sb1, col_logo_sb2, col_logo_sb3 = st.sidebar.columns([1, 2, 1])
+        with col_logo_sb2:
+            st.image(logo_path, use_container_width=True)
+    
+    st.sidebar.markdown(f"### Red de Paleobotánica<br><span style='font-size: 0.8em; color: gray;'>y Palinología Argentina</span>", unsafe_allow_html=True)
     st.sidebar.caption(f"👤 {user.full_name} ({user.institution})")
     if st.sidebar.button("Cerrar Sesión", use_container_width=True):
         st.session_state.user = None
@@ -809,9 +827,17 @@ def main_app():
     st.sidebar.markdown("---")
     
     # Navigation
-    options = ["Red General", "Genealogía (beta)", "Análisis de Red, Género y Región", "Colaboradores", "Administración"]
+    options = ["Red General", "Análisis de Red, Género y Región", "Colaboradores/as", "Administración"]
     
-    page = st.sidebar.radio("Navegación", options)
+    # Pre-selection logic for Redirects (from Corroboration/Suggestions to Admin)
+    default_page_idx = 0
+    if st.session_state.get("page_redirect"):
+        dest = st.session_state.page_redirect
+        if dest in options:
+            default_page_idx = options.index(dest)
+        st.session_state.page_redirect = None # Clear after use
+    
+    page = st.sidebar.radio("Navegación", options, index=default_page_idx)
 
     # Sidebar Bottom Logo
     st.sidebar.markdown("<br><br><br>", unsafe_allow_html=True)
@@ -856,167 +882,256 @@ def main_app():
         st.title("Análisis de Red, Género y Región")
         st.markdown("---")
         
-        # 1. Geographic Analysis
-        st.subheader("📍 Distribución Regional")
-        st.info("📊 Visibilidad de investigadores por provincias (vincualdos a la institución declarada).")
-        
-        prov_counts = []
-        for r in researchers:
-            if r.province:
-                is_active = False
-                current_year = datetime.now().year
-                if r.activity_end and r.activity_end >= (current_year - 5):
-                    is_active = True
-                prov_counts.append({'Provincia': r.province, 'Activo': is_active})
-        
-        if prov_counts:
-            df_prov = pd.DataFrame(prov_counts)
-            summary_prov = df_prov.groupby('Provincia').agg(
-                Total=('Activo', 'count'),
-                Activos=('Activo', 'sum')
-            ).reset_index().sort_values('Total', ascending=False)
-            
-            col_m1, col_m2 = st.columns(2)
-            with col_m1:
-                # 1. Argentina Map (using local GeoJSON)
-                try:
-                    with open("assets/geojson/argentina.geojson", "r") as f:
-                        arg_geojson = json.load(f)
-                    
-                    # Ensure province names match GeoJSON (normalized comparison)
-                    fig_map = px.choropleth(summary_prov, 
-                                            geojson=arg_geojson, 
-                                            locations='Provincia', 
-                                            featureidkey="properties.NAME_1",
-                                            color='Total',
-                                            hover_name='Provincia',
-                                            hover_data=['Activos'],
-                                            color_continuous_scale="Blues",
-                                            labels={'Total':'Investigadores'},
-                                            title="Mapa de Distribución (Argentina)")
-                    
-                    fig_map.update_geos(fitbounds="locations", visible=False)
-                    fig_map.update_layout(margin={"r":0,"t":40,"l":0,"b":0})
-                    st.plotly_chart(fig_map, use_container_width=True)
-                except Exception as e:
-                    st.error(f"Error cargando mapa: {e}")
-                    fig_prov = px.bar(summary_prov, x='Provincia', y='Total', text='Total',
-                                     title="Investigadores por Provincia",
-                                     color_discrete_sequence=['#2E5C8A'])
-                    st.plotly_chart(fig_prov, use_container_width=True)
-                    
-            with col_m2:
-                fig_active = px.pie(summary_prov, names='Provincia', values='Activos',
-                                   title="Distribución de Investigadores Activos",
-                                   hole=0.4, color_discrete_sequence=px.colors.qualitative.Safe)
-                st.plotly_chart(fig_active, use_container_width=True)
-            
-            st.caption("⚠️ El número de 'Activos' es provisorio, basado en los rangos de años cargados actualmente.")
-        else:
-            st.warning("No hay datos geográficos cargados aún.")
+        tab1, tab2 = st.tabs(["🌎 Geografía y Género", "🔬 Métricas de Comunidad (Avanzado)"])
 
-        st.markdown("---")
-        # Existing Gender Analysis...
-        st.write("Métricas y distribución de investigadores en la red genealógica.")
-        
-        # Calculate statistics
-        m_count = len([r for r in researchers if r.gender == "Masculino"])
-        f_count = len([r for r in researchers if r.gender == "Femenino"])
-        u_count = len([r for r in researchers if r.gender == "Desconocido"])
-        total_count = len(researchers)
-        
-        # 1. Gender Distribution Pie Chart
-        st.subheader("Distribución de Género General")
-        labels = ['Femenino', 'Masculino', 'Desconocido']
-        values = [f_count, m_count, u_count]
-        colors = ['#FF6B6B', '#4ECDC4', '#C7F464']
-        
-        fig = px.pie(names=labels, values=values, color_discrete_sequence=colors, hole=0.4)
-        fig.update_layout(margin=dict(t=20, b=20, l=20, r=20), height=350)
-        st.plotly_chart(fig, use_container_width=True)
-
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("Total Investigadores", total_count)
-            st.metric("Mujeres", f_count)
-        with col2:
-            st.metric("Relaciones (Aristas)", len(relationships))
-            st.metric("Hombres", m_count)
+        with tab1:
+            st.subheader("📍 Distribución Regional")
+            st.info("📊 Visibilidad de investigadores por provincias (vincualdos a la institución declarada).")
             
-        st.markdown("---")
-        
-        # 2. Activity Start per Decade by Gender
-        st.subheader("Inicio de Actividad por Década y Género")
-        decades = []
-        for r in researchers:
-            if r.activity_start:
-                # Group by decade
-                decade = (r.activity_start // 10) * 10
-                decades.append({'Década': decade, 'Género': r.gender})
-        
-        if decades:
-            df = pd.DataFrame(decades)
-            df_grouped = df.groupby(['Década', 'Género']).size().reset_index(name='Cantidad')
-            fig_bar = px.bar(df_grouped, x='Década', y='Cantidad', color='Género', barmode='group',
-                             color_discrete_map={'Femenino': '#FF6B6B', 'Masculino': '#4ECDC4', 'Desconocido': '#C7F464'})
-            st.plotly_chart(fig_bar, use_container_width=True)
+            prov_counts = []
+            for r in researchers:
+                if r.province:
+                    prov_counts.append({'Provincia': r.province, 'Nombre': r.name})
             
-        st.markdown("---")
-        
-        # 3. Flujo de Formación por Género (Assortativity)
-        st.subheader("Flujo de Mentorazgo por Género")
-        st.write("¿Quién dirige a quién? Relaciones director/a -> tesista.")
-        flow_data = []
-        r_dict = {r.id: r for r in researchers}
-        for rel in relationships:
-            if rel.type == "Secondary":
-                continue # Consider only primary directives
-            dir_r = r_dict.get(rel.director_id)
-            stu_r = r_dict.get(rel.student_id)
-            if dir_r and stu_r and dir_r.gender != 'Desconocido' and stu_r.gender != 'Desconocido':
-                flow_data.append({'Director/a': dir_r.gender, 'Tesista': stu_r.gender})
-        
-        if flow_data:
-            df_flow = pd.DataFrame(flow_data)
-            flow_counts = df_flow.groupby(['Director/a', 'Tesista']).size().reset_index(name='Cantidad')
-            
-            # Density Heatmap
-            fig_heat = px.density_heatmap(flow_counts, x='Tesista', y='Director/a', z='Cantidad', 
-                                          text_auto=True, color_continuous_scale='Tealgrn')
-            fig_heat.update_layout(height=400, margin=dict(t=20, b=20, l=20, r=20))
-            st.plotly_chart(fig_heat, use_container_width=True)
-
-        st.markdown("---")
-
-        # 4. Top 10 Formadores/as
-        st.subheader("Top 10 Formadores/as")
-        st.write("Investigadores con mayor cantidad de tesis principales dirigidas.")
-        
-        dir_list = []
-        for rel in relationships:
-            if rel.type == "Secondary": continue
-            dir_r = r_dict.get(rel.director_id)
-            if dir_r:
-                dir_list.append({'Nombre': dir_r.name, 'Género': dir_r.gender})
+            if prov_counts:
+                df_prov = pd.DataFrame(prov_counts)
+                # Group by province and aggregate: count total and join names
+                summary_prov = df_prov.groupby('Provincia').agg(
+                    Total=('Nombre', 'count'),
+                    Nombres=('Nombre', lambda x: ", ".join(sorted(list(x))))
+                ).reset_index().sort_values('Total', ascending=False)
                 
-        if dir_list:
-            df_dirs = pd.DataFrame(dir_list)
-            top_dirs = df_dirs['Nombre'].value_counts().head(10).reset_index()
-            top_dirs.columns = ['Investigador/a', 'Tesis Dirigidas']
-            # Map gender back
-            top_dirs['Género'] = top_dirs['Investigador/a'].apply(lambda n: next(r.gender for r in researchers if r.name == n))
+                # Formatting researcher names for better display in tooltips (wrap text if too long)
+                def format_names(names_str):
+                    import textwrap
+                    wrapped = textwrap.fill(names_str, width=50)
+                    return wrapped.replace('\n', '<br>')
+                
+                summary_prov['Nombres_HTML'] = summary_prov['Nombres'].apply(format_names)
+                
+                col_m1, col_m2 = st.columns(2)
+                with col_m1:
+                    # 1. Argentina Map (using local GeoJSON)
+                    try:
+                        with open("assets/geojson/argentina.geojson", "r") as f:
+                            arg_geojson = json.load(f)
+                        
+                        # Ensure province names match GeoJSON (normalized comparison)
+                        fig_map = px.choropleth(summary_prov, 
+                                                geojson=arg_geojson, 
+                                                locations='Provincia', 
+                                                featureidkey="properties.NAME_1",
+                                                color='Total',
+                                                hover_name='Provincia',
+                                                hover_data={
+                                                    'Total': True,
+                                                    'Provincia': False,
+                                                    'Nombres_HTML': True
+                                                },
+                                                color_continuous_scale="Blues",
+                                                labels={'Total':'Investigadores/as', 'Nombres_HTML': 'Integrantes'},
+                                                title="Mapa de Distribución (Argentina)")
+                        
+                        fig_map.update_geos(fitbounds="locations", visible=False)
+                        fig_map.update_layout(margin={"r":0,"t":40,"l":0,"b":0})
+                        st.plotly_chart(fig_map, use_container_width=True)
+                    except Exception as e:
+                        st.error(f"Error cargando mapa: {e}")
+                        fig_prov = px.bar(summary_prov, x='Provincia', y='Total', text='Total',
+                                         title="Investigadores/as por Provincia",
+                                         hover_data=['Nombres_HTML'],
+                                         color_discrete_sequence=['#2E5C8A'])
+                        st.plotly_chart(fig_prov, use_container_width=True)
+                        
+                with col_m2:
+                    fig_active = px.pie(summary_prov, names='Provincia', values='Total',
+                                       title="Distribución Total por Provincia",
+                                       hover_data=['Nombres_HTML'],
+                                       labels={'Nombres_HTML': 'Integrantes'},
+                                       hole=0.4, color_discrete_sequence=px.colors.qualitative.Safe)
+                    st.plotly_chart(fig_active, use_container_width=True)
+                
+                st.caption("ℹ️ La distribución se basa en la institución declarada para cada investigador/a.")
+            else:
+                st.warning("No hay datos geográficos cargados aún.")
+
+            st.markdown("---")
+            # Existing Gender Analysis...
+            st.write("Métricas y distribución de investigadores en la red genealógica.")
             
-            fig_top = px.bar(top_dirs, x='Investigador/a', y='Tesis Dirigidas', color='Género',
-                             color_discrete_map={'Femenino': '#FF6B6B', 'Masculino': '#4ECDC4', 'Desconocido': '#C7F464'})
-            fig_top.update_layout(xaxis_title="Investigador/a", yaxis_title="Tesis", xaxis={'categoryorder':'total descending'})
-            st.plotly_chart(fig_top, use_container_width=True)
+            # Calculate statistics
+            m_count = len([r for r in researchers if r.gender == "Masculino"])
+            f_count = len([r for r in researchers if r.gender == "Femenino"])
+            u_count = len([r for r in researchers if r.gender == "Desconocido"])
+            total_count = len(researchers)
+            
+            # 1. Gender Distribution Pie Chart
+            st.subheader("Distribución de Género General")
+            labels = ['Femenino', 'Masculino', 'Desconocido']
+            values = [f_count, m_count, u_count]
+            colors = ['#FF6B6B', '#4ECDC4', '#C7F464']
+            
+            fig = px.pie(names=labels, values=values, color_discrete_sequence=colors, hole=0.4)
+            fig.update_layout(margin=dict(t=20, b=20, l=20, r=20), height=350)
+            st.plotly_chart(fig, use_container_width=True)
+
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Total Investigadores/as", total_count)
+                st.metric("Mujeres", f_count)
+            with col2:
+                st.metric("Relaciones (Aristas)", len(relationships))
+                st.metric("Hombres", m_count)
+                
+            st.markdown("---")
+            
+            # 2. Career Start per Decade by Gender
+            st.subheader("Primeras Publicaciones por Década y Género")
+            decades = []
+            for r in researchers:
+                if r.activity_start:
+                    # Group by decade
+                    decade = (r.activity_start // 10) * 10
+                    decades.append({'Década': decade, 'Género': r.gender})
+            
+            if decades:
+                df = pd.DataFrame(decades)
+                df_grouped = df.groupby(['Década', 'Género']).size().reset_index(name='Cantidad')
+                fig_bar = px.bar(df_grouped, x='Década', y='Cantidad', color='Género', barmode='group',
+                                 color_discrete_map={'Femenino': '#FF6B6B', 'Masculino': '#4ECDC4', 'Desconocido': '#C7F464'})
+                st.plotly_chart(fig_bar, use_container_width=True)
+                
+            st.markdown("---")
+            
+            # 3. Flujo de Formación por Género (Assortativity)
+            st.subheader("Flujo de Mentorazgo por Género")
+            st.write("¿Quién dirige a quién? Relaciones director/a -> dirigido/a.")
+            flow_data = []
+            r_dict = {r.id: r for r in researchers}
+            for rel in relationships:
+                if rel.type == "Secondary":
+                    continue # Consider only primary directives
+                dir_r = r_dict.get(rel.director_id)
+                stu_r = r_dict.get(rel.student_id)
+                if dir_r and stu_r and dir_r.gender != 'Desconocido' and stu_r.gender != 'Desconocido':
+                    flow_data.append({'Director/a': dir_r.gender, 'Dirigido/a': stu_r.gender})
+            
+            if flow_data:
+                df_flow = pd.DataFrame(flow_data)
+                flow_counts = df_flow.groupby(['Director/a', 'Dirigido/a']).size().reset_index(name='Cantidad')
+                
+                # Density Heatmap
+                fig_heat = px.density_heatmap(flow_counts, x='Dirigido/a', y='Director/a', z='Cantidad', 
+                                              text_auto=True, color_continuous_scale='Tealgrn')
+                fig_heat.update_layout(height=400, margin=dict(t=20, b=20, l=20, r=20))
+                st.plotly_chart(fig_heat, use_container_width=True)
+
+        with tab2:
+            st.subheader("🚀 Métricas de Flujo y Temáticas")
+            st.info("Estas métricas avanzadas analizan la evolución de la comunidad en términos de transferencia de conocimiento y movilidad.")
+
+            # 1. Thematic Clusters (based on keywords)
+            st.markdown("#### 🏷️ Paisaje Temático de la Red")
+            all_keywords = []
+            for r in researchers:
+                if r.keywords:
+                    # Clean and append keywords
+                    kw_list = [k.strip().capitalize() for k in r.keywords.split(",")]
+                    all_keywords.extend(kw_list)
+            
+            if all_keywords:
+                kw_df = pd.DataFrame(all_keywords, columns=['Palabra Clave'])
+                kw_counts = kw_df['Palabra Clave'].value_counts().reset_index()
+                kw_counts.columns = ['Tema', 'Frecuencia']
+                
+                fig_kw = px.bar(kw_counts.head(20), x='Frecuencia', y='Tema', orientation='h',
+                               title="Top 20 Temas de Investigación en la Red",
+                               color='Frecuencia', color_continuous_scale='Viridis')
+                fig_kw.update_layout(yaxis={'categoryorder':'total ascending'})
+                st.plotly_chart(fig_kw, use_container_width=True)
+            else:
+                st.write("No hay palabras clave suficientes para generar un perfil temático.")
+
+            st.markdown("---")
+            
+            # 2. Academic Mobility Index
+            st.markdown("#### 🛫 Índice de Movilidad Académica")
+            st.write("Mide el porcentaje de discípulos/as que desarrollaron su carrera en una institución distinta a la de su director/a.")
+            
+            r_dict = {r.id: r for r in researchers}
+            mobility_events = []
+            for rel in relationships:
+                if rel.type == "Secondary": continue
+                dir_r = r_dict.get(rel.director_id)
+                stu_r = r_dict.get(rel.student_id)
+                if dir_r and stu_r and dir_r.institution and stu_r.institution:
+                    # Basic check: do they share the same institution string?
+                    # Note: this is a bit sensitive to string variations
+                    moved = dir_r.institution.strip().lower() != stu_r.institution.strip().lower()
+                    mobility_events.append({'Movilidad': "Cambio de Institución" if moved else "Misma Institución"})
+            
+            if mobility_events:
+                df_mob = pd.DataFrame(mobility_events)
+                mob_stats = df_mob['Movilidad'].value_counts().reset_index()
+                
+                fig_mob = px.pie(mob_stats, names='Movilidad', values='count', 
+                                title="Independencia e Intercambio Institucional",
+                                color='Movilidad', color_discrete_map={"Cambio de Institución": "#4ECDC4", "Misma Institución": "#FF6B6B"},
+                                hole=0.5)
+                st.plotly_chart(fig_mob, use_container_width=True)
+                
+                mob_rate = (len(df_mob[df_mob['Movilidad'] == "Cambio de Institución"]) / len(df_mob)) * 100
+                st.metric("Tasa de Movilidad Inter-Institucional", f"{mob_rate:.1f}%")
+            else:
+                st.write("Datos insuficientes para calcular la movilidad.")
+
+            st.markdown("---")
+
+            # 3. Territorial Legacy (Reach)
+            st.markdown("#### 🗺️ Alcance del Legado (Legado Territorial)")
+            st.write("Cantidad de provincias distintas donde un formador/a ha 'sembrado' discípulos/as.")
+            
+            legacy_data = []
+            for r in researchers:
+                # Get students for this researcher
+                students_ids = [rel.student_id for rel in relationships if rel.director_id == r.id and rel.type == "Primary"]
+                if students_ids:
+                    provinces = set()
+                    for s_id in students_ids:
+                        stu_r = r_dict.get(s_id)
+                        if stu_r and stu_r.province:
+                            provinces.add(stu_r.province)
+                    
+                    if provinces:
+                        legacy_data.append({'Nombre': r.name, 'Alcance (Provincias)': len(provinces), 'Cant. Dirigidos': len(students_ids)})
+            
+            if legacy_data:
+                df_legacy = pd.DataFrame(legacy_data).sort_values('Alcance (Provincias)', ascending=False)
+                fig_leg = px.scatter(df_legacy.head(15), x='Cant. Dirigidos', y='Alcance (Provincias)', 
+                                    text='Nombre', size='Alcance (Provincias)', color='Alcance (Provincias)',
+                                    title="Top 15 Formadores/as por Diversidad Geográfica de su Legado",
+                                    labels={'Cant. Dirigidos': 'Cantidad de Dirigidos/as (Total)'})
+                fig_leg.update_traces(textposition='top center')
+                st.plotly_chart(fig_leg, use_container_width=True)
+            else:
+                st.write("No hay datos de relaciones geográficas suficientes.")
 
 
-    elif page == "Colaboradores":
-        st.title("Aportes y Solicitudes de Edición")
+
+
+    elif page == "Colaboradores/as":
+        st.title("Aportes y Solicitudes de Edición (Colaboración)")
         st.info("Utilice este panel para colaborar con la red. Un administrador revisará y validará su solicitud antes de integrarla a la base general.")
         
-        tab_new, tab_mod, tab_rel, tab_wall = st.tabs(["Sumar Investigador Nuevo", "Modificar Investigador/a", "Informar Error / Nueva Relación", "🏆 Muro de Colaboradores"])
+        # Internal navigation state for Collaborators
+        colab_options = ["Sumar Investigador/a Nuevo/a", "Modificar Investigador/a", "Sugerir Nueva Relación / Director/a", "🧪 Corroborar Datos", "🏆 Muro de Colaboradores/as"]
+        if "colab_tab_index" not in st.session_state:
+            st.session_state.colab_tab_index = 0
+            
+        colab_tab = st.radio("Sección de Colaboración", colab_options, index=st.session_state.colab_tab_index, horizontal=True, label_visibility="collapsed")
+        st.session_state.colab_tab_index = colab_options.index(colab_tab) # Sync back
+        
+        st.markdown("---")
         
         session = Session()
         researchers = session.query(Researcher).all()
@@ -1028,10 +1143,79 @@ def main_app():
             if author.username != "admin": # Exclude the admin from the public wall
                 contributors.add(author.full_name)
                 
-        session.close()
         r_map = {r.id: r.name for r in researchers}
 
-        with tab_wall:
+
+        if colab_tab == "🧪 Corroborar Datos":
+            st.subheader("🧪 Corroboración de Datos")
+            st.write("Esta sección permite validar manualmente los datos cargados inicialmente. Una vez corroborados, se marcarán como tales en la base.")
+            
+            unverified_r = session.query(Researcher).filter(Researcher.verified == False).all()
+            unverified_rel = session.query(Relationship).filter(Relationship.verified == False).all()
+            
+            v_col1, v_col2 = st.columns(2)
+            
+            with v_col1:
+                st.markdown(f"**Investigadores/as a Revisar ({len(unverified_r)})**")
+                for r in unverified_r:
+                    with st.expander(f"👤 {r.name}"):
+                        st.write(f"**Institución:** {r.institution}")
+                        st.write(f"**Rol:** {r.role}")
+                        st.write(f"**Keywords:** {r.keywords}")
+                        col_v_r1, col_v_r2 = st.columns(2)
+                        with col_v_r1:
+                            if st.button(f"Corroborar {r.name}", key=f"v_r_colab_{r.id}", use_container_width=True):
+                                try:
+                                    robj = session.query(Researcher).get(r.id)
+                                    robj.verified = True
+                                    session.commit()
+                                    st.success(f"{r.name} corroborado/a.")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Error: {e}")
+                            if st.button(f"📝 Modificar", key=f"edit_r_v_colab_{r.id}", use_container_width=True):
+                                st.session_state.edit_target_id = r.id
+                                st.session_state.colab_tab_index = 1 # Modificar Investigador/a
+                                st.rerun()
+            
+            with v_col2:
+                st.markdown(f"**Relaciones a Revisar ({len(unverified_rel)})**")
+                for rel in unverified_rel:
+                    student = session.query(Researcher).get(rel.student_id)
+                    director = session.query(Researcher).get(rel.director_id)
+                    s_name = student.name if student else rel.student_id
+                    d_name = director.name if director else rel.director_id
+                    
+                    with st.expander(f"🔗 {d_name} -> {s_name}"):
+                        st.write(f"**Tipo de Vínculo:** {rel.type}")
+                        col_v_rel1, col_v_rel2 = st.columns(2)
+                        with col_v_rel1:
+                            if st.button(f"Corroborar Relación {rel.id}", key=f"v_rel_colab_{rel.id}", use_container_width=True):
+                                try:
+                                    relobj = session.query(Relationship).get(rel.id)
+                                    relobj.verified = True
+                                    session.commit()
+                                    st.success("Vínculo corroborado.")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Error: {e}")
+                            if st.button(f"📝 Modificar", key=f"edit_rel_v_colab_{rel.id}", use_container_width=True):
+                                st.session_state.edit_rel_dir_id = rel.director_id
+                                st.session_state.edit_rel_stu_id = rel.student_id
+                                st.session_state.colab_tab_index = 2 # Sugerir Nueva Relación
+                                st.rerun()
+                            if st.button(f"🗑️ Borrar", key=f"del_rel_v_colab_{rel.id}", use_container_width=True):
+                                try:
+                                    relobj = session.query(Relationship).get(rel.id)
+                                    session.delete(relobj)
+                                    session.commit()
+                                    st.success("Relación eliminada.")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Error: {e}")
+        
+
+        elif colab_tab == "🏆 Muro de Colaboradores/as":
             st.markdown("### 🏆 Quienes sumaron datos al proyecto")
             st.write("Agradecimiento especial a las personas que han contribuido activamente al crecimiento y precisión de esta red genealógica:")
             if contributors:
@@ -1040,7 +1224,7 @@ def main_app():
             else:
                 st.write("Aún no hay contribuciones externas validadas. ¡Sé la primera persona en aportar!")
 
-        with tab_new:
+        elif colab_tab == "Sumar Investigador/a Nuevo/a":
             st.markdown("### Sugerir Incorporación")
             with st.form("suggestion_add_form"):
                 st.write("Complete los datos disponibles para sugerir un nuevo nodo principal:")
@@ -1049,10 +1233,10 @@ def main_app():
                     new_name = st.text_input("Nombre y Apellido")
                     new_inst = st.text_input("Institución Principal")
                 with col_b: 
-                    new_role = st.selectbox("Rol Biográfico", ["", "Pionero", "Formador", "Investigador", "Becario"])
+                    new_role = st.selectbox("Rol Biográfico", ["", "Pionero/a", "Formador/a", "Investigador/a", "Becario/a"])
                     new_gender = st.selectbox("Identidad de Género", ["Desconocido", "Masculino", "Femenino", "Otro"])
                 
-                new_years = st.text_input("Años de Actividad Académica (ej: 2010-2024)")
+                new_years = st.text_input("Primera y última publicación (años)", help="Formato: 1980-2024")
                 col_geo1, col_geo2 = st.columns(2)
                 with col_geo1: new_prov = st.text_input("Provincia (Ej: Chubut)")
                 with col_geo2: new_city = st.text_input("Ciudad (Ej: Trelew)")
@@ -1079,12 +1263,15 @@ def main_app():
                         }
                         desc = json.dumps(sug_data)
                         # We use target_id="None" for new creations
-                        add_suggestion(user.id, "Nuevo Investigador", "None", desc)
+                        add_suggestion(user.id, "Nuevo/a Investigador/a", "None", desc)
                         st.success("¡Gracias! Solicitud de alta enviada a revisión.")
 
-        with tab_mod:
+        elif colab_tab == "Modificar Investigador/a":
             st.markdown("### Sugerir Correcciones a Nodos Existentes")
-            target_id = st.selectbox("Seleccione Investigador/a o Becario/a a Modificar", options=[""] + list(r_map.keys()), format_func=lambda x: r_map[x] if x else "-- Elegir Colega --")
+            # Handle pre-selection from redirect
+            default_r_mod = st.session_state.get("edit_target_id", "")
+            target_id = st.selectbox("Seleccione Investigador/a o Becario/a a Modificar", options=[""] + list(r_map.keys()), index=([None]+list(r_map.keys())).index(default_r_mod) if default_r_mod in r_map else 0, format_func=lambda x: r_map[x] if x else "-- Elegir Colega --")
+            # Clear after use? User might want it to stay. Let's keep it for now.
             
             if target_id:
                 r_to_mod = session.query(Researcher).get(target_id)
@@ -1094,13 +1281,13 @@ def main_app():
                     col1, col2 = st.columns(2)
                     with col1:
                         new_inst = st.text_input("Institución Correcta", placeholder=r_to_mod.institution or "")
-                        roles = ["", "Pionero", "Formador", "Investigador", "Becario"]
+                        roles = ["", "Pionero/a", "Formador/a", "Investigador/a", "Becario/a"]
                         curr_role_idx = roles.index(r_to_mod.role) if r_to_mod.role in roles else 0
                         new_role = st.selectbox("Rol Biográfico", roles, index=curr_role_idx)
                     with col2:
                         new_is_phd = st.checkbox("Actualmente en Doctorado (Marcar si cursa)", value=getattr(r_to_mod, 'is_phd_in_progress', False))
                         curr_years = f"{r_to_mod.activity_start}-{r_to_mod.activity_end}" if r_to_mod.activity_start and r_to_mod.activity_end else ""
-                        new_years = st.text_input("Años Actividad (ej: 1980-2024)", placeholder=curr_years)
+                        new_years = st.text_input("Años de publicación (primer-último)", placeholder=curr_years)
                     new_scholar = st.text_input("Google Scholar URL", placeholder=r_to_mod.scholar_url or "")
                     new_rg = st.text_input("ResearchGate URL", placeholder=r_to_mod.researchgate_url or "")
                     new_orcid = st.text_input("ORCID URL", placeholder=getattr(r_to_mod, 'orcid_url', "") or "")
@@ -1132,19 +1319,48 @@ def main_app():
                             st.warning("No se detectaron cambios para enviar.")
                         else:
                             desc = json.dumps(sug_data)
-                            add_suggestion(user.id, "Modificar Investigador", target_id, desc)
+                            add_suggestion(user.id, "Modificar Investigador/a", target_id, desc)
                             st.success("Corrección enviada para revisión analítica.")
 
-        with tab_rel:
-            st.markdown("### Reportar Errores o Nuevos Vínculos")
-            with st.form("suggestion_text_form"):
-                desc = st.text_area("Describa detalladamente el error encontrado, o detalle la relación a sumar (Ej: Juan Pérez fue co-dirigido por Ana Gómez en el año 2005 para su tesis doctoral en la UBA).")
-                if st.form_submit_button("Reportar al Equipo Administrador"):
-                    if not desc.strip():
-                        st.error("La descripción no puede estar vacía.")
-                    else:
-                        add_suggestion(user.id, "Informar Error / Relación", "None", desc)
+        elif colab_tab == "Sugerir Nueva Relación / Director/a":
+            st.markdown("### Reportar Errores o Nuevas Relaciones")
+            st.info("Para sugerir una nueva relación, use los desplegables. Para otros errores, use el campo de texto inferior.")
+            
+            with st.form("suggestion_rel_form"):
+                col_rel1, col_rel2 = st.columns(2)
+                with col_rel1:
+                    default_dir = st.session_state.get("edit_rel_dir_id", "")
+                    d_id = st.selectbox("Director/a", options=[""] + list(r_map.keys()), index=([None]+list(r_map.keys())).index(default_dir) if default_dir in r_map else 0, format_func=lambda x: r_map[x] if x else "-- Seleccionar --")
+                with col_rel2:
+                    default_stu = st.session_state.get("edit_rel_student_id", st.session_state.get("edit_rel_stu_id", ""))
+                    s_id = st.selectbox("Dirigido/a", options=[""] + list(r_map.keys()), index=([None]+list(r_map.keys())).index(default_stu) if default_stu in r_map else 0, format_func=lambda x: r_map[x] if x else "-- Seleccionar --")
+                
+                type_rel = st.selectbox("Tipo de Vínculo", ["Primary", "Secondary", "Postdoc", "Co-Postdoc"])
+                
+                other_desc = st.text_area("Otros Detalles / Informe de Error", placeholder="Ej: Juan Pérez fue co-dirigido por Ana Gómez en el año 2005 para su tesis doctoral en la UBA...")
+                
+                if st.form_submit_button("Enviar Sugerencia / Reporte"):
+                    if d_id and s_id:
+                        if d_id == s_id:
+                            st.error("Un/a investigador/a no puede dirigirse a sí mismo/a.")
+                        else:
+                            sug_data = {
+                                "type": "new_relationship",
+                                "director_id": d_id,
+                                "student_id": s_id,
+                                "rel_type": type_rel,
+                                "notes": other_desc
+                            }
+                            desc = json.dumps(sug_data)
+                            add_suggestion(user.id, "Nueva Relación", f"{d_id}->{s_id}", desc)
+                            st.success("¡Gracias! Propuesta de vínculo enviada a revisión.")
+                    elif other_desc.strip():
+                        add_suggestion(user.id, "Informar Error / Relación", "None", other_desc)
                         st.success("Reporte enviado con éxito.")
+                    else:
+                        st.error("Debe seleccionar ambos investigadores o completar el campo de descripción.")
+        
+        session.close()
 
 
     # PAGE: ADMINISTRACIÓN (Master Admin View)
@@ -1161,10 +1377,19 @@ def main_app():
             st.success("Credenciales Administrativas Verificadas.")
             st.markdown("---")
             
-            tab_panel, tab_gestion, tab_db, tab_audit = st.tabs(["Validar Sugerencias", "Gestión Directa", "Explorador de Tablas", "Auditoría Total"])
+            # Handle tab pre-selection from session state
+            dt_idx = st.session_state.get("admin_tab_index", 0)
             
+            tab_panel, tab_gestion, tab_monitor, tab_db, tab_backup, tab_audit = st.tabs(["Validar Sugerencias", "Gestión Directa", "📊 Monitoreo de Datos", "Explorador de Tablas", "📦 Copia de Seguridad", "Auditoría Total"])
+            
+            # Reset the index after use to avoid sticky navigation
+            if st.session_state.get("admin_tab_index") == 1:
+                st.warning("👈 Seleccione la solapa **'Gestión Directa'** para editar el registro seleccionado.")
+            
+            st.session_state.admin_tab_index = 0
+
             with tab_panel:
-                st.subheader("Sugerencias de Colaboradores Pendientes")
+                st.subheader("Sugerencias de Colaboradores/as Pendientes")
                 
                 session = Session()
                 suggestions = session.query(Suggestion, User).join(User).filter(Suggestion.status == "Pending").all()
@@ -1184,7 +1409,12 @@ def main_app():
                                 st.write("**Nuevos Datos Propuestos:**")
                                 st.json(sug_json["changes"])
                             elif isinstance(sug_json, dict) and sug_json.get("type") == "new_researcher":
-                                st.write("**Sugerencia de Nuevo Nodo:**")
+                                is_auto_applicable = True 
+                                st.write("**Sugerencia de Nuevo/a Nodo/a:**")
+                                st.json(sug_json)
+                            elif isinstance(sug_json, dict) and sug_json.get("type") == "new_relationship":
+                                is_auto_applicable = True
+                                st.write("**Propuesta de Nueva Relación:**")
                                 st.json(sug_json)
                             else:
                                 st.write(f"**Detalle:** {sug.suggested_changes}")
@@ -1193,6 +1423,10 @@ def main_app():
                         
                         if sug.target_id and sug.target_id != "None":
                             st.write(f"**ID Objetivo:** {sug.target_id}")
+                            if st.button(f"📝 Ir a Modificar {sug.target_id}", key=f"edit_sug_{sug.id}"):
+                                st.session_state.edit_target_id = sug.target_id
+                                st.session_state.page_redirect = "Administración"
+                                st.rerun()
                         
                         col_approve, col_reject = st.columns(2)
                         with col_approve:
@@ -1223,6 +1457,40 @@ def main_app():
                                         if changes.get("city"): r_to_mod.city = changes["city"]
                                         
                                         st.success("Cambios inyectados automáticamente en la matriz de datos.")
+                                    else:
+                                        st.error("No se pudo encontrar al/la investigador/a para modificar.")
+                                elif is_auto_applicable and sug_json.get("type") == "new_relationship":
+                                    d_id = sug_json["director_id"]
+                                    s_id = sug_json["student_id"]
+                                    r_type = sug_json["rel_type"]
+                                    
+                                    existing = session.query(Relationship).filter_by(student_id=s_id, director_id=d_id).first()
+                                    if not existing:
+                                        new_rel = Relationship(student_id=s_id, director_id=d_id, type=r_type)
+                                        session.add(new_rel)
+                                        st.success(f"Relación {r_type} inyectada exitosamente.")
+                                    else:
+                                        st.warning("Esta relación ya existe.")
+                                elif is_auto_applicable and sug_json.get("type") == "new_researcher":
+                                    # Basic logic to create new researcher from suggestion
+                                    new_id = sug_json["name"].lower().replace(" ", "_")
+                                    if session.query(Researcher).get(new_id):
+                                        new_id = f"{new_id}_{int(datetime.now().timestamp())}"
+                                    
+                                    new_r = Researcher(
+                                        id=new_id,
+                                        name=sug_json["name"],
+                                        institution=sug_json.get("institution"),
+                                        role=sug_json.get("role"),
+                                        gender=sug_json.get("gender", "Desconocido"),
+                                        province=sug_json.get("province"),
+                                        city=sug_json.get("city"),
+                                        keywords=sug_json.get("keywords"),
+                                        scholar_url=sug_json.get("scholar_url"),
+                                        created_by=author.id
+                                    )
+                                    session.add(new_r)
+                                    st.success(f"Nuevo/a investigador/a {sug_json['name']} inyectado/a exitosamente.")
                                 
                                 sug.status = "Approved"
                                 session.commit()
@@ -1260,7 +1528,7 @@ def main_app():
                         with col_a:
                             r_name = st.text_input("Nombre"); r_id = st.text_input("ID (snake_case)").strip()
                         with col_b:
-                            r_inst = st.text_input("Institución"); r_role = st.selectbox("Rol", ["Investigador", "Formador", "Pionero", "Becario"])
+                            r_inst = st.text_input("Institución"); r_role = st.selectbox("Rol", ["Investigador/a", "Formador/a", "Pionero/a", "Becario/a"])
                             r_phd = st.checkbox("Doctorado en Curso")
                         r_notes = st.text_area("Notas")
                         col_c, col_d, col_gndr = st.columns(3)
@@ -1292,8 +1560,8 @@ def main_app():
                                      province=r_prov, city=r_city,
                                      created_by=user.id, last_edited_by=user.id)
                                 session.add(new_r); session.commit()
-                                add_audit_log(user.id, "CREATE MANUAL", "Researcher", r_id, f"Injected {r_name}")
-                                st.success("Peritaje concluido. Nodo añadido.")
+                                add_audit_log(user.id, "CREATE MANUAL", "Researcher/a", r_id, f"Injected {r_name}")
+                                st.success("Peritaje concluido. Nodo/a añadido/a.")
                             session.close()
 
                 with sub_edit:
@@ -1301,7 +1569,14 @@ def main_app():
                     all_r = session.query(Researcher).all()
                     session.close()
                     r_selector = {r.id: r.name for r in all_r}
-                    target_edit_id = st.selectbox("Apuntar Investigador", list(r_selector.keys()), format_func=lambda x: r_selector[x])
+                    
+                    # Pre-selection logic
+                    default_idx_edit = 0
+                    st_id = st.session_state.get('edit_target_id')
+                    if st_id and st_id in r_selector:
+                        default_idx_edit = list(r_selector.keys()).index(st_id)
+                    
+                    target_edit_id = st.selectbox("Apuntar Investigador/a", list(r_selector.keys()), index=default_idx_edit, format_func=lambda x: r_selector[x])
                     
                     if target_edit_id:
                         session = Session()
@@ -1313,7 +1588,7 @@ def main_app():
                             col1, col2 = st.columns(2)
                             with col1:
                                 e_inst = st.text_input("Institución", value=r_to_edit.institution or "")
-                                e_role = st.selectbox("Rol", ["Investigador", "Formador", "Pionero", "Becario"], index=["Investigador", "Formador", "Pionero", "Becario"].index(r_to_edit.role) if r_to_edit.role in ["Investigador", "Formador", "Pionero", "Becario"] else 0)
+                                e_role = st.selectbox("Rol", ["Investigador/a", "Formador/a", "Pionero/a", "Becario/a"], index=["Investigador/a", "Formador/a", "Pionero/a", "Becario/a"].index(r_to_edit.role) if r_to_edit.role in ["Investigador/a", "Formador/a", "Pionero/a", "Becario/a"] else 0)
                             with col2:
                                 e_phd = st.checkbox("Doctorado en curso", value=getattr(r_to_edit, 'is_phd_in_progress', False))
                                 e_photo = st.text_input("Photo URL", value=r_to_edit.photo_url or "")
@@ -1356,9 +1631,18 @@ def main_app():
                     researchers = session.query(Researcher).all()
                     session.close()
                     r_opts = {r.id: f"{r.name} ({r.id})" for r in researchers}
+                    
+                    # Pre-selection logic for relations
+                    def_stu_idx = 0
+                    def_dir_idx = 0
+                    st_stu = st.session_state.get('edit_rel_stu_id')
+                    st_dir = st.session_state.get('edit_rel_dir_id')
+                    if st_stu and st_stu in r_opts: def_stu_idx = list(r_opts.keys()).index(st_stu)
+                    if st_dir and st_dir in r_opts: def_dir_idx = list(r_opts.keys()).index(st_dir)
+
                     with st.form("mk_rel_admin"):
-                        s_id = st.selectbox("Tesista / Hijo Académico", list(r_opts.keys()), format_func=lambda x: r_opts[x])
-                        d_id = st.selectbox("Director / Padre Académico", list(r_opts.keys()), format_func=lambda x: r_opts[x])
+                        s_id = st.selectbox("Dirigido/a", list(r_opts.keys()), index=def_stu_idx, format_func=lambda x: r_opts[x])
+                        d_id = st.selectbox("Director/a", list(r_opts.keys()), index=def_dir_idx, format_func=lambda x: r_opts[x])
                         type_rel = st.radio("Jerarquía de la Relación", ["Primary", "Secondary", "Postdoc", "Co-Postdoc"])
                         if st.form_submit_button("Soldar Linaje"):
                             session = Session()
@@ -1369,6 +1653,75 @@ def main_app():
                                 add_audit_log(user.id, "CREATE MANUAL", "Rel", f"{d_id}->{s_id}", type_rel)
                                 st.success("Linaje consolidado.")
                             session.close()
+
+            with tab_monitor:
+                st.subheader("Estado de la Carga y Actividad")
+                session = Session()
+                
+                # Fetch data for charts
+                researchers_df = pd.read_sql(session.query(Researcher).statement, session.bind)
+                relationships_df = pd.read_sql(session.query(Relationship).statement, session.bind)
+                audit_df = pd.read_sql(session.query(AuditLog).statement, session.bind)
+                
+                # Ensure timestamp is datetime (Robust Conversion)
+                if not audit_df.empty:
+                    audit_df['timestamp'] = pd.to_datetime(audit_df['timestamp'], errors='coerce')
+                
+                
+                col_m1, col_m2 = st.columns(2)
+                
+                with col_m1:
+                    # Researcher growth
+                    # Ensure timestamp is truly datetime for the sub-selection
+                    audit_res = audit_df[audit_df['target_type'] == 'Researcher'].copy()
+                    if not audit_res.empty:
+                        audit_res['timestamp'] = pd.to_datetime(audit_res['timestamp'], errors='coerce')
+                        audit_res = audit_res.dropna(subset=['timestamp'])
+                        
+                        researcher_counts = audit_res['timestamp'].dt.date.value_counts().sort_index().cumsum()
+                        if not researcher_counts.empty:
+                            fig_res = px.line(x=researcher_counts.index, y=researcher_counts.values, 
+                                            title="Evolución de Investigadores (Nodos)", 
+                                            labels={'x': 'Fecha', 'y': 'Total Nodos'})
+                            st.plotly_chart(fig_res, use_container_width=True)
+                        else:
+                            st.info("No hay datos cronológicos de investigadores.")
+                    else:
+                        st.info("Aún no hay registros de nuevos investigadores.")
+
+                with col_m2:
+                    # Action distribution
+                    action_dist = audit_df['action'].value_counts()
+                    fig_actions = px.pie(names=action_dist.index, values=action_dist.values, title="Distribución de Acciones")
+                    st.plotly_chart(fig_actions, use_container_width=True)
+                
+                # Edits and Corrections over time
+                st.write("**Historial de Ediciones y Correcciones**")
+                if not audit_df.empty and 'timestamp' in audit_df.columns:
+                    # Filter out invalid timestamps for grouping
+                    audit_plot = audit_df.dropna(subset=['timestamp']).copy()
+                    if not audit_plot.empty:
+                        audit_plot['Fecha'] = audit_plot['timestamp'].dt.date
+                        daily_actions = audit_plot.groupby(['Fecha', 'action']).size().unstack(fill_value=0)
+                        if not daily_actions.empty:
+                            fig_daily = px.bar(daily_actions, title="Actividad Diaria por Tipo de Acción")
+                            st.plotly_chart(fig_daily, use_container_width=True)
+                        else:
+                            st.info("Sin actividad diaria registrada.")
+                    else:
+                        st.info("Sin datos temporales válidos.")
+                else:
+                    st.info("Sin datos de auditoría.")
+                
+                # Overall Stats
+                st.divider()
+                stat_col1, stat_col2, stat_col3, stat_col4 = st.columns(4)
+                stat_col1.metric("Total Investigadores/as", len(researchers_df))
+                stat_col2.metric("Total Relaciones", len(relationships_df))
+                stat_col3.metric("Ediciones Realizadas", len(audit_df[audit_df['action'].str.contains('UPDATE', na=False)]))
+                stat_col4.metric("Sugerencias Totales", session.query(Suggestion).count())
+                
+                session.close()
 
             with tab_db:
                 st.subheader("Base de Datos General")
@@ -1383,8 +1736,41 @@ def main_app():
                     st.dataframe(data_rel, use_container_width=True)
                 with sub_usr:
                     data_usr = pd.read_sql(session.query(User).statement, session.bind)
-                    st.dataframe(data_usr[["id", "username", "full_name", "institution"]], use_container_width=True)
+                    st.dataframe(data_usr, use_container_width=True)
                 session.close()
+
+            with tab_backup:
+                st.subheader("📦 Gestión de Versiones y Backups")
+                st.write("Esta herramienta permite crear una copia de seguridad 'congelada' de la red actual, incluyendo la base de datos y los recursos visuales.")
+                
+                col_back1, col_back2 = st.columns([2, 1])
+                
+                with col_back1:
+                    backup_note = st.text_input("Nota de la versión", placeholder="Ej: Antes de la reunión SAPP 2026")
+                    if st.button("🚀 Archivar Versión Actual", use_container_width=True):
+                        try:
+                            from archive_version import archive_version
+                            success, result = archive_version(backup_note)
+                            if success:
+                                st.success(f"Archivo creado exitosamente: {os.path.basename(result)}")
+                                add_audit_log(user.id, "ARCHIVE", "System", "Archive", f"Manual backup: {backup_note}")
+                            else:
+                                st.error(f"Error al archivar: {result}")
+                        except Exception as e:
+                            st.error(f"Error crítico: {e}")
+                
+                with col_back2:
+                    st.markdown("**Versiones Existentes**")
+                    version_path = "versions"
+                    if os.path.exists(version_path):
+                        v_files = sorted([f for f in os.listdir(version_path) if f.endswith('.zip')], reverse=True)
+                        if v_files:
+                            for vf in v_files:
+                                st.caption(f"📄 {vf}")
+                        else:
+                            st.write("No hay archivos guardados.")
+                    else:
+                        st.write("Carpeta de versiones no detectada.")
 
             with tab_audit:
                 st.subheader("Registro Central de Inserciones y Cambios")

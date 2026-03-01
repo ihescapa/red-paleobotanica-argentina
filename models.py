@@ -31,6 +31,7 @@ class Researcher(Base):
     gender = Column(String, default="Desconocido")
     province = Column(String)
     city = Column(String)
+    verified = Column(Boolean, default=False)
     
     # Audit
     created_by = Column(Integer, ForeignKey('users.id'))
@@ -60,6 +61,7 @@ class Relationship(Base):
     student_id = Column(String, ForeignKey('researchers.id'), nullable=False)
     director_id = Column(String, ForeignKey('researchers.id'), nullable=False)
     type = Column(String, default="Primary") # Primary (Thesis), Secondary (Co-direction/Mentor)
+    verified = Column(Boolean, default=False)
     
     student = relationship("Researcher", foreign_keys=[student_id], back_populates="directors_rel")
     director = relationship("Researcher", foreign_keys=[director_id], back_populates="students_rel")
